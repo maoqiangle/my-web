@@ -6,7 +6,7 @@
     <title>首轮抽签</title>
     <script src="https://libs.baidu.com/jquery/1.10.2/jquery.min.js"></script>
     <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.js"></script>
-    <script src="https://cdn.bootcss.com/xlsx/0.11.5/xlsx.core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <style>
         /* 图片区域： */
         
@@ -152,38 +152,50 @@
     </div>
 
     <script>
-        //给input标签绑定change事件，一上传选中的.xls文件就会触发该函数
         $('#excel-file').change(function(e) {
             var files = e.target.files;
+            if (files.length === 0) {
+                console.log('未选择文件');
+                return;
+            }
+
+            // 检查文件类型
+            var fileName = files[0].name.toLowerCase();
+            if (!fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
+                console.log('文件格式不正确，请上传 .xls 或 .xlsx 文件');
+                return;
+            }
+
             var fileReader = new FileReader();
             fileReader.onload = function(ev) {
                 try {
-                    var data = ev.target.result
-                    var workbook = XLSX.read(data, {
-                            type: 'binary'
-                        }) // 以二进制流方式读取得到整份excel表格对象
-                    var persons = []; // 存储获取到的数据
-                } catch (e) {
-                    console.log('文件类型不正确');
-                    return;
-                }
-                // 表格的表格范围，可用于判断表头是否数量是否正确
-                var fromTo = '';
-                // 遍历每张表读取
-                for (var sheet in workbook.Sheets) {
-                    if (workbook.Sheets.hasOwnProperty(sheet)) {
-                        fromTo = workbook.Sheets[sheet]['!ref'];
-                        console.log(fromTo);
-                        persons = persons.concat(XLSX.utils.sheet_to_json(workbook.Sheets[sheet]));
-                        //break; // 如果只取第一张表，就取消注释这行
+                    var data = new Uint8Array(ev.target.result); // 转换为 Uint8Array
+                    var workbook = XLSX.read(data, { type: 'array' }); // 使用 type: 'array'
+
+                    var persons = [];
+                    var fromTo = '';
+
+                    // 遍历每张表读取
+                    for (var sheet in workbook.Sheets) {
+                        if (workbook.Sheets.hasOwnProperty(sheet)) {
+                            fromTo = workbook.Sheets[sheet]['!ref'];
+                            console.log("工作表范围：", fromTo);
+                            var sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
+                            console.log("当前工作表数据：", sheetData);
+                            persons = persons.concat(sheetData);
+                        }
                     }
-                }
-                //在控制台打印出来表格中的数据
-                console.log(persons);
+
+                    console.log("解析后的数据：", persons);
+
+                    if (persons.length === 0) {
+                        console.log("未读取到数据，请检查 Excel 文件内容是否为空或格式是否正确");
+                        return;
+                    }
+
                 // 获取参赛队长的名称
-                arr = persons.map(item => {
-                    return item.name
-                });
+                var arr1 = persons.map(item => item.队长抽签);
+                    console.log("提取的队长抽签数据：", arr1);
                 // 获取队长的名称
                 duizhangarr = persons.map(item => {
                     return item.首轮抽签
@@ -194,12 +206,18 @@
                 // 设置全局变量
                 // localStorage.setItem('myArray', JSON.stringify(arr2));
                 // 获取届数
-                sort = persons[0]['sort']
-                dynamicCreateBox()
-                $("#area").val(JSON.stringify(persons));
+               // 获取届数
+               sort = persons[0]?.sort;
+                    console.log("届数：", sort);
+          // 动态创建内容
+          dynamicCreateBox();
+                } catch (e) {
+                    console.error('解析文件时出错：', e.message);
+                    console.log('文件类型不正确或文件损坏');
+                }
             };
-            // 以二进制方式打开文件
-            fileReader.readAsBinaryString(files[0]);
+
+            fileReader.readAsArrayBuffer(files[0]); // 使用 readAsArrayBuffer 方法
         });
 
         // 模拟后台数据
