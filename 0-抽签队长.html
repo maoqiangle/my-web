@@ -1,39 +1,32 @@
 <!doctype html>
 <html>
-
 <head>
     <meta charset="utf-8">
     <title>选秀抽签</title>
     <script src="https://libs.baidu.com/jquery/1.10.2/jquery.min.js"></script>
-    <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.js"></script>
-    <script src="https://cdn.bootcss.com/xlsx/0.11.5/xlsx.core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <style>
         /* 图片区域： */
-        
         body {
-            background-image: url('3.jpg');
+            background-image: url('basketball0.jpg');
             background-repeat: no-repeat;
             background-size: cover;
             background-attachment: fixed;
             background-position: center center;
         }
-        
         h1 {
             color: rgb(233, 225, 225);
-            font: 0.875em/1.5em"黑体", "PTSans", "Arial", sans-serif;
+            font: 0.875em/1.5em "黑体", "PTSans", "Arial", sans-serif;
             font-size: 40px;
             font-weight: bolder;
             text-align: center;
         }
-        
         html {
             font-size: 25;
         }
-        
         body {
             background-color: aliceblue;
         }
-        
         .wrapDiv {
             width: 100%;
             height: 100vh;
@@ -41,19 +34,16 @@
             padding: 0 20px;
             box-sizing: border-box;
         }
-        
         .leftBox {
             display: flex;
             flex-wrap: wrap;
             clear: both;
         }
-        
         #span {
             float: right;
             top: 30px;
             right: 185px;
         }
-        
         #btn {
             width: 100px;
             height: 40px;
@@ -70,10 +60,9 @@
             box-sizing: content-box;
             border-radius: 5px;
         }
-        
         .nameBox {
-            width: 120px;  /* 宽度： */
-            height: 30px; /* 高度： */
+            width: 120px;
+            height: 30px;
             float: right;
             background-color: antiquewhite;
             margin-right: 10px;
@@ -82,108 +71,139 @@
             line-height: 30px;
             font-weight: bold;
         }
-        
         .ulBox {
             height: 260px;
             font-weight: bold;
         }
-        
         .liBox {
             width: 270px;
             float: left;
             background-color: antiquewhite;
             font-weight: bold;
         }
-        
         .selectedName {
             float: left;
             width: 340px;
             background: #dbd8d8;
-            /* margin-top: 200px auto; */
             margin-left: 30px;
             background: #dbd8d8;
             overflow: hidden;
             text-align: center;
-            /* font-weight: bold; */
         }
-        
         h3 {
             font-weight: bolder;
             text-align: center;
             float: left;
             color: rgb(221, 213, 213);
-            font: 0.875em/1.5em"黑体", "PTSans", "Arial", sans-serif;
+            font: 0.875em/1.5em "黑体", "PTSans", "Arial", sans-serif;
             font-size: 30px;
         }
     </style>
 </head>
-
 <body>
     <input type="file" id="excel-file" style="left: 50%; color: blanchedalmond;">
-    <!-- <textarea id="area"></textarea> -->
-    <h1 id="h1-title" linear-gradient>`《苍穹杯》S${sort}届3vs3正赛队长抽签`</h1>
+    <h1 id="h1-title">《苍穹杯》S${sort}届3vs3正赛队长抽签</h1>
     <br>
     <span id="span"></span>
     <div class="wrapDiv">
         <div style="flex:1">
-            <h3 style="margin: 1;"> 参赛队员:</h3>
+            <h3>参赛队员:</h3>
             <div id="leftBox" class="leftBox"></div>
         </div>
         <div id="selectedName" class="selectedName" style="height: 780px auto;">
             <h2>队长名单</h2>
             <ol id="ulBox" class="ulBox"></ol>
-            <!-- <div id="clearBtn">一键清除</div> -->
         </div>
         <input type="button" id="btn" value="开始" class="button">
     </div>
 
     <script>
-        //给input标签绑定change事件，一上传选中的.xls文件就会触发该函数
+        // 全局变量
+        var arr = [];
+        var sort = 1;
+
         $('#excel-file').change(function(e) {
             var files = e.target.files;
+            if (files.length === 0) {
+                console.log('未选择文件');
+                return;
+            }
+
+            // 检查文件类型
+            var fileName = files[0].name.toLowerCase();
+            if (!fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
+                console.log('文件格式不正确，请上传 .xls 或 .xlsx 文件');
+                return;
+            }
+
             var fileReader = new FileReader();
             fileReader.onload = function(ev) {
                 try {
-                    var data = ev.target.result
-                    var workbook = XLSX.read(data, {
-                            type: 'binary'
-                        }) // 以二进制流方式读取得到整份excel表格对象
-                    var persons = []; // 存储获取到的数据
-                } catch (e) {
-                    console.log('文件类型不正确');
-                    return;
-                }
-                // 表格的表格范围，可用于判断表头是否数量是否正确
-                var fromTo = '';
-                // 遍历每张表读取
-                for (var sheet in workbook.Sheets) {
-                    if (workbook.Sheets.hasOwnProperty(sheet)) {
-                        fromTo = workbook.Sheets[sheet]['!ref'];
-                        console.log(fromTo);
-                        persons = persons.concat(XLSX.utils.sheet_to_json(workbook.Sheets[sheet]));
-                        //break; // 如果只取第一张表，就取消注释这行
+                    var data = new Uint8Array(ev.target.result); // 转换为 Uint8Array
+                    var workbook = XLSX.read(data, { type: 'array' }); // 使用 type: 'array'
+
+                    var persons = [];
+                    var fromTo = '';
+
+                    // 遍历每张表读取
+                    for (var sheet in workbook.Sheets) {
+                        if (workbook.Sheets.hasOwnProperty(sheet)) {
+                            fromTo = workbook.Sheets[sheet]['!ref'];
+                            console.log("工作表范围：", fromTo);
+                            var sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
+                            console.log("当前工作表数据：", sheetData);
+                            persons = persons.concat(sheetData);
+                        }
                     }
+
+                    console.log("解析后的数据：", persons);
+
+                    if (persons.length === 0) {
+                        console.log("未读取到数据，请检查 Excel 文件内容是否为空或格式是否正确");
+                        return;
+                    }
+
+                    // 提取队长抽签数据
+                    var arr1 = persons.map(item => item.队长抽签);
+                    console.log("提取的队长抽签数据：", arr1);
+
+                    // 过滤空值
+                    arr = arr1.filter(x => x !== undefined && x !== null && x !== "");
+                    console.log("过滤后的数据：", arr);
+
+                    // 获取届数
+                    sort = persons[0]?.sort;
+                    console.log("届数：", sort);
+
+                    // 动态创建内容
+                    dynamicCreateBox();
+                } catch (e) {
+                    console.error('解析文件时出错：', e.message);
+                    console.log('文件类型不正确或文件损坏');
                 }
-                //在控制台打印出来表格中的数据
-                console.log(persons);
-                arr1 = persons.map(item => {
-                    return item.队长抽签
-                });
-                // 获取队长的名称
-                // duizhangarrarr = persons.map(item => {
-                //     return item.duizhang
-                // });
-                // 过滤空值
-                arr = arr1.filter(x => !!x == true || x == 0);
-                // 获取届数
-                sort = persons[0]['sort']
-                dynamicCreateBox()
-                $("#area").val(JSON.stringify(persons));
             };
-            // 以二进制方式打开文件
-            fileReader.readAsBinaryString(files[0]);
+
+            fileReader.readAsArrayBuffer(files[0]); // 使用 readAsArrayBuffer 方法
         });
 
+        // 动态创建层
+        function dynamicCreateBox() {
+            if (!arr || arr.length === 0) {
+                console.log("没有数据可用于显示");
+                return;
+            }
+
+            for (var i = 0; i < arr.length; i++) {
+                var div = document.createElement("div");
+                div.innerText = arr[i];
+                div.className = "nameBox";
+                $("#leftBox").append(div);
+            };
+
+            var h1Dom = document.getElementById('h1-title');
+            console.log('sort', sort);
+            h1Dom.innerText = `《苍穹杯》S${sort}届3v3正赛抽签队长`;
+        }
         // 模拟后台数据
         var arr = [];
         var sort = 1;
@@ -315,8 +335,7 @@
             second = second < 10 ? "0" + second : second;
             $("#span").innerText = year + "-" + month + "-" + dat + " " + hour + ":" + minitue + ":" + second
         }
+
     </script>
-
 </body>
-
 </html>
