@@ -223,73 +223,75 @@
             <div id="results" class="selectedName"></div>
 
             <script>
-                // 获取队长抽签的名称并转化为数组
-                var arr = JSON.parse(localStorage.getItem('myArray'));
-                console.log(arr)
-                document.getElementById('refreshBtn').addEventListener('click', function() {
-                // 更新全局变量
-                arr = JSON.parse(localStorage.getItem('myArray'));
-                // sort =JSON.parse(localStorage.getItem('sort'));
-                // 如果你想刷新整个页面
-                window.location.reload(); // 这将会重新加载当前页面
-                });
-                var selectArr = []
-                var orgArrCount = arr.length;
-                var currentSelectNum = 0;
+                // 初始化数据
+            let arr = JSON.parse(localStorage.getItem('myArray')) || [];
+            const sort = JSON.parse(localStorage.getItem('sort')) || 1;
 
-                // 获取届数
-                var sort = localStorage.getItem('sort');
-                sort = JSON.parse(sort)
-                console.log(sort)
+        // 界面初始化
+        document.getElementById('h1-title').innerText = `《苍穹杯》S${sort}届3v3正赛 小组赛抽签`;
+        initForm();
 
-                initForm();
+        function initForm() {
+            $("#leftBox").empty();
+            arr.forEach(team => {
+                const div = document.createElement("div");
+                div.className = "nameBox";
+                div.textContent = team;
+                $("#leftBox").append(div);
+            });
+        }
 
-                // 初始化表单
-                function initForm() {
-                    // 动态设置选择人的高度
-                    var selectedNameHeight = orgArrCount * 40 + 120;
-                    $("#selectedName").css("height", selectedNameHeight + "px");
-                    // 动态创建图层
-                    dynamicCreateBox();
+        // 智能分组逻辑
+        function smartGrouping() {
+            const teams = [...arr]; // 克隆原始数组
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+
+            if(teams.length < 2) {
+                alert("至少需要2支队伍才能进行分组！");
+                return;
+            }
+
+            const totalGroups = Math.ceil(teams.length / 2);
+            let hasBye = teams.length % 2 !== 0;
+
+            for(let i=0; i<totalGroups; i++) {
+                const groupElement = document.createElement('p');
+                groupElement.style.fontSize = '25px';
+
+                // 抽签逻辑
+                const indexA = Math.floor(Math.random() * teams.length);
+                const teamA = teams.splice(indexA, 1)[0];
+
+                let teamB = '轮空';
+                if(teams.length > 0 && (!hasBye || i < totalGroups-1)) {
+                    const indexB = Math.floor(Math.random() * teams.length);
+                    teamB = teams.splice(indexB, 1)[0];
                 }
 
-                // 动态创建层
-                function dynamicCreateBox() {
-                    for (var i = 0; i < arr.length; i++) {
-                        var div = document.createElement("div");
-                        div.innerText = arr[i];
-                        div.className = "nameBox";
-                        $("#leftBox").append(div);
-                    };
-                }
+                // 构建显示内容
+                const matchNumber = i + 1;
+                const groupInfo = teamB === '轮空' ? 
+                    `${matchNumber}. ${teamA} 【轮空】` : 
+                    `${matchNumber}. ${teamA} vs ${teamB}`;
 
-                var h1Dom = document.getElementById('h1-title')
-                console.log('sort', sort)
-                h1Dom.innerText = `《苍穹杯》S${sort}届3v3正赛 小组赛抽签`
+                groupElement.textContent = groupInfo;
+                resultsContainer.appendChild(groupElement);
+            }
 
-                var teams = arr;
+            // 显示剩余队伍
+            if(teams.length > 0) {
+                const remainElement = document.createElement('p');
+                remainElement.textContent = `未分配队伍：${teams.join(', ')}`;
+                remainElement.style.color = '#ff0000';
+                resultsContainer.appendChild(remainElement);
+            }
+        }
 
-                function drawMatches() {
-                    // 抽签场数设置
-                    const numMatches = 5 ;
-                    const resultsContainer = document.getElementById('results');
-                    resultsContainer.innerHTML = '';
-
-                    for (let i = 0; i < numMatches; i++) {
-                        const matchNumber = i + 1;
-                        const teamAIndex = Math.floor(Math.random() * teams.length);
-                        const teamA = teams.splice(teamAIndex, 1)[0];
-
-                        const teamBIndex = Math.floor(Math.random() * teams.length);
-                        const teamB = teams.splice(teamBIndex, 1)[0];
-
-                        const matchResult = `${teamA} vs ${teamB}`;
-                        const matchElement = document.createElement('p');
-                        matchElement.textContent = `${matchNumber}. ${matchResult}`;
-                        resultsContainer.appendChild(matchElement);
-                    }
-                }
-
-                const drawButton = document.getElementById('btn');
-                drawButton.addEventListener('click', drawMatches);
+        // 事件绑定
+        document.getElementById('btn').addEventListener('click', smartGrouping);
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            arr = JSON.parse(localStorage.getItem('myArray'));
+            window.location.reload();
+        });
             </script>
